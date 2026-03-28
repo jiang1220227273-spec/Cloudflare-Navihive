@@ -28,7 +28,7 @@ interface Env {
   DB: D1Database;
   AUTH_ENABLED?: string; // 是否启用身份验证
   AUTH_USERNAME?: string; // 认证用户名
-  AUTH_PASSWORD?: string; // 认证密码哈希 (bcrypt)
+  AUTH_PASSWORD?: string; // 认证密码，支持明文或 bcrypt 哈希
   AUTH_SECRET?: string; // JWT密钥
 }
 
@@ -111,20 +111,54 @@ export interface LoginResponse {
   message?: string;
 }
 
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+
+type PasswordMode = 'missing' | 'plaintext' | 'bcrypt' | 'invalid-bcrypt';
+
 // API 类
 export class NavigationAPI {
   private db: D1Database;
   private authEnabled: boolean;
   private username: string;
-  private passwordHash: string; // 存储bcrypt哈希而非明文密码
+  private passwordConfig: string; // 支持明文密码或 bcrypt 哈希
   private secret: string;
 
   constructor(env: Env) {
     this.db = env.DB;
     this.authEnabled = env.AUTH_ENABLED === 'true';
     this.username = env.AUTH_USERNAME || '';
-    this.passwordHash = env.AUTH_PASSWORD || ''; // 现在存储的是哈希
+    this.passwordConfig = env.AUTH_PASSWORD?.trim() || '';
     this.secret = env.AUTH_SECRET || 'DefaultSecretKey';
+  }
+
+  private getPasswordMode(): PasswordMode {
+    if (!this.passwordConfig) {
+      return 'missing';
+    }
+
+    if (BCRYPT_HASH_PATTERN.test(this.passwordConfig)) {
+      return 'bcrypt';
+    }
+
+    if (this.passwordConfig.startsWith('$2')) {
+      return 'invalid-bcrypt';
+    }
+
+    return 'plaintext';
+  }
+
+  private verifyConfiguredPassword(password: string): boolean {
+    const passwordMode = this.getPasswordMode();
+
+    if (passwordMode === 'bcrypt') {
+      return compareSync(password, this.passwordConfig);
+    }
+
+    if (passwordMode === 'plaintext') {
+      return password === this.passwordConfig;
+    }
+
+    return false;
   }
 
   // 初始化数据库表
@@ -187,6 +221,22 @@ export class NavigationAPI {
       };
     }
 
+    const passwordMode = this.getPasswordMode();
+
+    if (!this.username || passwordMode === 'missing') {
+      return {
+        success: false,
+        message: '管理员认证未配置完成，请检查 AUTH_USERNAME 和 AUTH_PASSWORD',
+      };
+    }
+
+    if (passwordMode === 'invalid-bcrypt') {
+      return {
+        success: false,
+        message: 'AUTH_PASSWORD 看起来像 bcrypt 哈希，但格式无效。请重新生成哈希，或直接填写明文密码。',
+      };
+    }
+
     // 验证用户名
     if (loginRequest.username !== this.username) {
       return {
@@ -195,8 +245,7 @@ export class NavigationAPI {
       };
     }
 
-    // 使用 bcrypt 验证密码
-    const isPasswordValid = compareSync(loginRequest.password, this.passwordHash);
+    const isPasswordValid = this.verifyConfiguredPassword(loginRequest.password);
 
     if (isPasswordValid) {
       // 生成JWT令牌，传递记住我参数

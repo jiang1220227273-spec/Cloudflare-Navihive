@@ -98,36 +98,54 @@
    | `AUTH_ENABLED` | `true` | 是否开启登录认证 |
    | `AUTH_REQUIRED_FOR_READ` | `false` | 设为 `false` 时，公开读接口可匿名访问 |
    | `AUTH_USERNAME` | `linuxdo` 或 `admin` | 登录用户名 |
-   | `AUTH_PASSWORD` | `$2b$10$...` | **必须是 bcrypt 哈希，不能填明文密码** |
+   | `AUTH_PASSWORD` | `ChangeMe123!` 或 `$2b$10$...` | **支持明文和 bcrypt 哈希。一键部署可直接填明文，手动部署推荐使用哈希或 Secret。** |
    | `AUTH_SECRET` | `32 位以上随机字符串` | JWT 签名密钥，不要和密码相同 |
 
-   如果你原本打算把下面这些值直接填到 Cloudflare：
+   如果你打算直接在 Cloudflare 里填写：
 
    ```text
    AUTH_ENABLED=true
    AUTH_USERNAME=linuxdo
-   AUTH_PASSWORD=linuxdo
-   AUTH_SECRET=linuxdo
+   AUTH_PASSWORD=ChangeMe123!
+   AUTH_SECRET=请替换成32位以上随机字符串
    ```
 
-   那么其中只有 `AUTH_ENABLED=true` 和 `AUTH_USERNAME=linuxdo` 可以直接用。  
-   `AUTH_PASSWORD=linuxdo` 是错误填法，必须先生成 bcrypt 哈希；`AUTH_SECRET=linuxdo` 也不安全，至少应替换成 32 位以上随机字符串。
+   现在这套写法可以直接工作，适合 **一键部署 / Dashboard 填参**。  
+   其中 `AUTH_PASSWORD` 会自动识别是明文还是 bcrypt 哈希；但 `AUTH_SECRET` 仍然必须替换成 32 位以上随机字符串。
 
-6. 先生成 `AUTH_PASSWORD` 和 `AUTH_SECRET`  
-   生成 bcrypt 哈希：
-
-   ```bash
-   pnpm hash-password linuxdo
-   ```
-
+6. 生成 `AUTH_SECRET`，并按部署方式选择密码配置  
    生成随机密钥：
 
    ```bash
    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    ```
 
+   如果你是 **一键部署 / Cloudflare Dashboard**，推荐直接填写明文密码，例如：
+
+   ```text
+   AUTH_PASSWORD=ChangeMe123!
+   ```
+
+   如果你是 **手动使用原仓库 / CLI 部署**，推荐先生成 bcrypt 哈希：
+
+   ```bash
+   pnpm hash-password linuxdo
+   ```
+
    然后把结果填到 Cloudflare，或者写入本地 `wrangler.jsonc` 的 `vars` / secrets 配置中。  
-   一个推荐示例：
+   一键部署推荐示例：
+
+   ```jsonc
+   "vars": {
+     "AUTH_ENABLED": "true",
+     "AUTH_REQUIRED_FOR_READ": "false",
+     "AUTH_USERNAME": "linuxdo",
+     "AUTH_PASSWORD": "ChangeMe123!",
+     "AUTH_SECRET": "请替换成32位以上随机字符串"
+   }
+   ```
+
+   手动部署推荐示例：
 
    ```jsonc
    "vars": {
@@ -157,14 +175,14 @@
        "AUTH_ENABLED": "true",
        "AUTH_REQUIRED_FOR_READ": "false",
        "AUTH_USERNAME": "linuxdo",
-       "AUTH_PASSWORD": "$2b$10$...",
+       "AUTH_PASSWORD": "ChangeMe123! 或 $2b$10$...",
        "AUTH_SECRET": "32位以上随机字符串"
      }
    }
    ```
 
-   不要把真实生产密码、真实哈希和真实密钥提交到公开仓库。  
-   生产环境更推荐在 Cloudflare Dashboard 里单独维护 Variables / Secrets。
+   一键部署时可以直接填写明文密码。  
+   手动仓库部署时，不要把真实生产密码、真实哈希和真实密钥提交到公开仓库；生产环境更推荐在 Cloudflare Dashboard / Wrangler Secret 里单独维护。
 
 8. Build / Deploy 命令怎么填  
    这个项目在 Cloudflare 上推荐这样填：

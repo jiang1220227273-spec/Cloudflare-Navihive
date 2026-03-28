@@ -164,7 +164,7 @@ wrangler d1 create navigation-db
     "AUTH_ENABLED": "true",
     "AUTH_REQUIRED_FOR_READ": "false",
     "AUTH_USERNAME": "admin",
-    "AUTH_PASSWORD": "", // 下一步生成
+    "AUTH_PASSWORD": "ChangeMe123!", // 可直接填明文，也可填 bcrypt 哈希
     "AUTH_SECRET": "" // 下一步生成
   },
 
@@ -177,21 +177,24 @@ wrangler d1 create navigation-db
 }
 ```
 
-### 步骤 4：生成密钥
+### 步骤 4：生成密钥并选择密码配置方式
+
+生成 `AUTH_SECRET`（32 位随机字符串）：
 
 ```bash
-# 生成密码哈希
-pnpm hash-password YourStrongPassword123
-
-# 输出示例：
-# $2a$10$abcdefghijklmnopqrstuvwxyz1234567890
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-生成 `AUTH_SECRET`（32位随机字符串）：
-- 访问 https://randomkeygen.com/
-- 复制 "CodeIgniter Encryption Keys" 中的任意一个
+然后按部署方式二选一：
 
-更新 `wrangler.jsonc` 中的密码哈希和密钥。
+- 一键部署 / Dashboard 填参：`AUTH_PASSWORD` 直接填写明文密码，例如 `ChangeMe123!`
+- 手动使用原仓库 / CLI 部署：推荐先生成 bcrypt 哈希再填写
+
+```bash
+pnpm hash-password YourStrongPassword123
+```
+
+更新 `wrangler.jsonc` 中的密码和密钥。
 
 ### 步骤 5：初始化数据库
 
@@ -233,7 +236,7 @@ Published navihive (1.23 sec)
 | 配置项 | 说明 | 示例 |
 |--------|------|------|
 | `AUTH_USERNAME` | 管理员用户名 | admin |
-| `AUTH_PASSWORD` | 管理员密码（bcrypt 哈希） | $2a$10$... |
+| `AUTH_PASSWORD` | 管理员密码（支持明文或 bcrypt 哈希） | ChangeMe123! 或 $2a$10$... |
 | `AUTH_SECRET` | JWT 签名密钥（32位） | your-32-char-secret-key-here |
 | `database_id` | D1 数据库 ID | abc123-def456 |
 

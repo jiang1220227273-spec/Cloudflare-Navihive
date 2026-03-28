@@ -23,8 +23,9 @@
     ],
     "vars": {
         "AUTH_ENABLED": "true",
-        "AUTH_USERNAME": "linuxdo",
-        "AUTH_PASSWORD": "linuxdo",
-        "AUTH_SECRET": "linuxdo"
+        "AUTH_REQUIRED_FOR_READ": "false",
+        "AUTH_USERNAME": "admin",
+        "AUTH_PASSWORD": "ChangeMe123!",
+        "AUTH_SECRET": "change-me-to-a-random-32-char-secret"
     }
 }

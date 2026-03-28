@@ -21,43 +21,53 @@ class SimpleRateLimiter {
         this.windowMs = windowMinutes * 60 * 1000;
     }
 
-    /**
-     * 检查是否超过速率限制
-     * @param identifier 唯一标识符 (如 IP 地址)
-     * @returns 如果允许请求返回 true,否则返回 false
-     */
-    check(identifier: string): boolean {
+    private getRecord(identifier: string): { count: number; resetTime: number } | null {
         const now = Date.now();
         const record = this.requests.get(identifier);
 
-        // 清理过期记录
         if (record && now > record.resetTime) {
             this.requests.delete(identifier);
+            return null;
         }
 
-        // 获取或创建记录
-        const current = this.requests.get(identifier) || {
+        return this.requests.get(identifier) || null;
+    }
+
+    /**
+     * 检查当前标识符是否已经被限制
+     */
+    isBlocked(identifier: string): boolean {
+        const record = this.getRecord(identifier);
+        return !!record && record.count >= this.maxRequests;
+    }
+
+    /**
+     * 记录一次失败尝试
+     */
+    recordFailure(identifier: string): void {
+        const now = Date.now();
+        const current = this.getRecord(identifier) || {
             count: 0,
             resetTime: now + this.windowMs
         };
 
-        // 检查是否超限
-        if (current.count >= this.maxRequests) {
-            return false;
-        }
-
-        // 增加计数
         current.count++;
         this.requests.set(identifier, current);
-        return true;
+    }
+
+    /**
+     * 登录成功后清空失败计数
+     */
+    reset(identifier: string): void {
+        this.requests.delete(identifier);
     }
 
     /**
      * 获取剩余请求次数
      */
     getRemaining(identifier: string): number {
-        const record = this.requests.get(identifier);
-        if (!record || Date.now() > record.resetTime) {
+        const record = this.getRecord(identifier);
+        if (!record) {
             return this.maxRequests;
         }
         return Math.max(0, this.maxRequests - record.count);
@@ -76,7 +86,7 @@ class SimpleRateLimiter {
     }
 }
 
-// 创建登录端点速率限制器: 5次尝试/15分钟
+// 创建登录失败速率限制器: 15分钟内最多 5 次失败
 const loginRateLimiter = new SimpleRateLimiter(5, 15);
 
 
@@ -368,7 +378,7 @@ export default {
                                        request.headers.get('X-Forwarded-For') ||
                                        'unknown';
 
-                        if (!loginRateLimiter.check(clientIP)) {
+                        if (loginRateLimiter.isBlocked(clientIP)) {
                             const remaining = loginRateLimiter.getRemaining(clientIP);
                             log({
                                 level: 'warn',
@@ -407,6 +417,7 @@ export default {
 
                     // 如果登录成功，设置 HttpOnly Cookie
                     if (result.success && result.token) {
+                        loginRateLimiter.reset(clientIP);
                         const maxAge = loginData.rememberMe ? 30 * 24 * 60 * 60 : 7 * 24 * 60 * 60;
 
                         return createJsonResponse(
@@ -425,6 +436,10 @@ export default {
                                 },
                             }
                         );
+                    }
+
+                    if (result.message === '用户名或密码错误') {
+                        loginRateLimiter.recordFailure(clientIP);
                     }
 
                     return createJsonResponse(result, request);

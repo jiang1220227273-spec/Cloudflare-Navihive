@@ -161,11 +161,16 @@ if (data.authenticated) {
     "AUTH_ENABLED": "true",
     "AUTH_REQUIRED_FOR_READ": "false",
     "AUTH_USERNAME": "admin",
-    "AUTH_PASSWORD": "$2a$10$...", // bcrypt hash
+    "AUTH_PASSWORD": "ChangeMe123!", // 也可以填写 $2a$10$... 形式的 bcrypt 哈希
     "AUTH_SECRET": "your-secret-key-min-32-chars"
   }
 }
 ```
+
+**推荐用法：**
+
+- 一键部署 / Dashboard 配置：`AUTH_PASSWORD` 可直接填写明文密码
+- 手动仓库部署：推荐先生成 bcrypt 哈希再填写，或使用 Wrangler Secret
 
 **生成密码哈希：**
 ```bash

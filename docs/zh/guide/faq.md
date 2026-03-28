@@ -65,7 +65,7 @@ wrangler d1 execute navigation-db --file=schema.sql
 确保 `wrangler.jsonc` 中设置了必要的环境变量：
 - `AUTH_ENABLED`
 - `AUTH_USERNAME`
-- `AUTH_PASSWORD`（bcrypt 哈希）
+- `AUTH_PASSWORD`（支持明文或 bcrypt 哈希）
 - `AUTH_SECRET`
 
 **4. 浏览器缓存问题**
@@ -126,22 +126,30 @@ wrangler whoami
 
 ### 如何修改管理员密码？
 
-1. 使用命令生成新密码的哈希值：
+1. 按部署方式选择修改方式：
+
+- 一键部署 / Dashboard 填参：直接把 `AUTH_PASSWORD` 改成新的明文密码
+- 手动仓库部署：推荐先生成新的 bcrypt 哈希再更新 `AUTH_PASSWORD`
+
+2. 如果你使用手动部署，先生成新密码的哈希值：
 ```bash
 pnpm hash-password your-new-password
 ```
 
-2. 复制输出的哈希值（以 `$2a$` 开头）
+3. 复制新的密码值：
 
-3. 更新 `wrangler.jsonc` 中的 `AUTH_PASSWORD`
+- 一键部署：复制新的明文密码
+- 手动部署：复制输出的哈希值（以 `$2a$` 或 `$2b$` 开头）
 
-4. 重新部署：
+4. 更新 `wrangler.jsonc`、Cloudflare Dashboard Variables，或 Wrangler Secret 中的 `AUTH_PASSWORD`
+
+5. 重新部署：
 ```bash
 pnpm deploy
 ```
 
 ::: danger 安全提示
-永远不要在配置文件中存储明文密码！始终使用 bcrypt 哈希。
+一键部署为了降低配置门槛，支持直接填写明文密码。手动仓库部署或公开仓库场景下，仍然推荐使用 bcrypt 哈希或 Cloudflare Secret，避免把明文密码提交到代码仓库。
 :::
 
 ### 如何启用访客模式（公开访问）？
