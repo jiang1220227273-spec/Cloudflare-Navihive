@@ -173,13 +173,8 @@ const SiteCard = memo(function SiteCard({
               zIndex: 3,
               display: 'flex',
               gap: 1,
-              opacity: { xs: 1, md: isFavorite ? 1 : 0 },
-              transform: 'translateY(-4px)',
+              opacity: 1,
               transition: 'opacity 0.2s ease, transform 0.2s ease',
-              '.MuiCardActionArea-root:hover &': {
-                opacity: 1,
-                transform: 'translateY(0)',
-              },
             }}
           >
             {onToggleFavorite && (
