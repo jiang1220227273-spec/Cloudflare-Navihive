@@ -41,7 +41,7 @@
     - **属性 7: 用户身份识别正确性**
     - **验证需求: 4.7, 4.8**
 
-- [-] 3. Worker API 实现 - PreferencesAPI 类
+- [x] 3. Worker API 实现 - PreferencesAPI 类
   - [x] 3.1 创建 PreferencesAPI 类骨架
     - 创建 `worker/api/preferences.ts`
     - 定义 PreferencesAPI 类，接受 D1Database 参数
@@ -85,7 +85,7 @@
     - **属性 13: 最近访问记录排序**
     - **验证需求: 7.5**
   
-  - [ ] 3.8 实现游客数据迁移方法
+  - [x] 3.8 实现游客数据迁移方法
     - 实现 `migrateGuestData(guestUserId: string, authenticatedUserId: string)` 方法
     - 使用 D1 batch API 执行事务性操作
     - 处理重复收藏（ON CONFLICT DO NOTHING）
@@ -100,15 +100,15 @@
     - **属性 5: 迁移冲突解决**
     - **验证需求: 2.4**
 
-- [ ] 4. Worker API 实现 - 路由和中间件
-  - [ ] 4.1 实现输入验证工具
+- [x] 4. Worker API 实现 - 路由和中间件
+  - [x] 4.1 实现输入验证工具
     - 创建 `worker/validation/preferences.ts`
     - 实现 `validateFavoriteRequest(siteId: unknown)` 函数
     - 实现 `validatePreferencesUpdate(data: unknown)` 函数
     - 验证 view_mode、theme_mode、custom_colors 格式
     - _需求: 8.2_
   
-  - [ ] 4.2 添加偏好 API 路由到 Worker
+  - [x] 4.2 添加偏好 API 路由到 Worker
     - 修改 `worker/index.ts`
     - 添加 GET /api/preferences/favorites 路由
     - 添加 POST /api/preferences/favorites/:siteId 路由

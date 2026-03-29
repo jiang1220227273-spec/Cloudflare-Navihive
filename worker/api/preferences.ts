@@ -48,7 +48,7 @@ export class PreferencesAPI {
       .bind(userId)
       .all();
 
-    return result.results as Favorite[];
+    return result.results as unknown as Favorite[];
   }
 
   /**
@@ -83,7 +83,7 @@ export class PreferencesAPI {
       throw new Error('该站点已在收藏列表中');
     }
 
-    return result as Favorite;
+    return result as unknown as Favorite;
   }
 
   /**
@@ -127,7 +127,7 @@ export class PreferencesAPI {
       }
     }
 
-    return prefs as UserPreferences;
+    return prefs as unknown as UserPreferences;
   }
 
   /**
@@ -234,54 +234,53 @@ export class PreferencesAPI {
       .bind(userId, safeLimit)
       .all();
 
-    return result.results as Visit[];
+    return result.results as unknown as Visit[];
   }
 
+  /**
+   * Migrate guest user data to authenticated user account
+   * @param guestUserId - Guest user's device identifier
+   * @param authenticatedUserId - Authenticated user's username
+   * @returns Migration statistics (number of favorites and visits migrated)
+   * @description Uses D1 batch API for transactional operations:
+   * - Migrates favorites with ON CONFLICT DO NOTHING (keeps existing)
+   * - Migrates visits with ON CONFLICT DO UPDATE (keeps latest timestamp)
+   * - Cleans up guest data after successful migration
+   * **Validates: Requirements 2.3, 2.4, 2.5, 4.6**
+   */
+  async migrateGuestData(
+    guestUserId: string,
+    authenticatedUserId: string
+  ): Promise<MigrationResult> {
+    const migrated = {
+      favorites: 0,
+      visits: 0,
+    };
 
-    /**
-     * Migrate guest user data to authenticated user account
-     * @param guestUserId - Guest user's device identifier
-     * @param authenticatedUserId - Authenticated user's username
-     * @returns Migration statistics (number of favorites and visits migrated)
-     * @description Uses D1 batch API for transactional operations:
-     * - Migrates favorites with ON CONFLICT DO NOTHING (keeps existing)
-     * - Migrates visits with ON CONFLICT DO UPDATE (keeps latest timestamp)
-     * - Cleans up guest data after successful migration
-     * **Validates: Requirements 2.3, 2.4, 2.5, 4.6**
-     */
-    async migrateGuestData(
-      guestUserId: string,
-      authenticatedUserId: string
-    ): Promise<MigrationResult> {
-      const migrated = {
-        favorites: 0,
-        visits: 0,
-      };
+    try {
+      // D1 doesn't support transactions directly, use batch API for atomic operations
+      const statements: D1PreparedStatement[] = [];
 
-      try {
-        // D1 doesn't support transactions directly, use batch API for atomic operations
-        const statements: D1PreparedStatement[] = [];
-
-        // 1. Migrate favorites (handle duplicates with ON CONFLICT DO NOTHING)
-        statements.push(
-          this.db
-            .prepare(
-              `
+      // 1. Migrate favorites (handle duplicates with ON CONFLICT DO NOTHING)
+      statements.push(
+        this.db
+          .prepare(
+            `
             INSERT INTO user_favorites (user_id, site_id, created_at)
             SELECT ?, site_id, created_at
             FROM user_favorites
             WHERE user_id = ?
             ON CONFLICT(user_id, site_id) DO NOTHING
           `
-            )
-            .bind(authenticatedUserId, guestUserId)
-        );
+          )
+          .bind(authenticatedUserId, guestUserId)
+      );
 
-        // 2. Migrate visit records (merge with latest timestamp)
-        statements.push(
-          this.db
-            .prepare(
-              `
+      // 2. Migrate visit records (merge with latest timestamp)
+      statements.push(
+        this.db
+          .prepare(
+            `
             INSERT INTO user_recent_visits (user_id, site_id, visited_at)
             SELECT ?, site_id, visited_at
             FROM user_recent_visits
@@ -289,28 +288,31 @@ export class PreferencesAPI {
             ON CONFLICT(user_id, site_id) DO UPDATE SET
               visited_at = MAX(visited_at, excluded.visited_at)
           `
-            )
-            .bind(authenticatedUserId, guestUserId)
-        );
+          )
+          .bind(authenticatedUserId, guestUserId)
+      );
 
-        // 3. Clean up guest favorites data
-        statements.push(this.db.prepare('DELETE FROM user_favorites WHERE user_id = ?').bind(guestUserId));
+      // 3. Clean up guest favorites data
+      statements.push(
+        this.db.prepare('DELETE FROM user_favorites WHERE user_id = ?').bind(guestUserId)
+      );
 
-        // 4. Clean up guest visits data
-        statements.push(this.db.prepare('DELETE FROM user_recent_visits WHERE user_id = ?').bind(guestUserId));
+      // 4. Clean up guest visits data
+      statements.push(
+        this.db.prepare('DELETE FROM user_recent_visits WHERE user_id = ?').bind(guestUserId)
+      );
 
-        // Execute batch operations atomically
-        const results = await this.db.batch(statements);
+      // Execute batch operations atomically
+      const results = await this.db.batch(statements);
 
-        // Collect migration statistics
-        migrated.favorites = results[0].meta?.changes || 0;
-        migrated.visits = results[1].meta?.changes || 0;
+      // Collect migration statistics
+      migrated.favorites = results[0]?.meta?.changes || 0;
+      migrated.visits = results[1]?.meta?.changes || 0;
 
-        return migrated;
-      } catch (error) {
-        console.error('Migration failed:', error);
-        throw new Error('偏好数据迁移失败');
-      }
+      return migrated;
+    } catch (error) {
+      console.error('Migration failed:', error);
+      throw new Error('偏好数据迁移失败');
     }
-
+  }
 }

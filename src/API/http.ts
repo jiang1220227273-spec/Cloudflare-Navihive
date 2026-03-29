@@ -2,11 +2,11 @@
 // 不使用外部JWT库，改为内置的crypto API
 import { compareSync } from 'bcrypt-edge';
 
-// 定义D1数据库类型
+// 定义D1数据库类型 (compatible with Cloudflare Workers D1Database)
 interface D1Database {
   prepare(query: string): D1PreparedStatement;
-  exec(query: string): Promise<D1Result>;
   batch<T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]>;
+  exec(query: string): Promise<D1ExecResult>;
 }
 
 interface D1PreparedStatement {
@@ -21,6 +21,11 @@ interface D1Result<T = unknown> {
   success: boolean;
   error?: string;
   meta?: unknown;
+}
+
+interface D1ExecResult {
+  count: number;
+  duration: number;
 }
 
 // 定义环境变量接口
@@ -167,14 +172,20 @@ export class NavigationAPI {
     // 尝试自动修复缺失的字段 (即使已初始化也尝试执行，以修复旧版本数据库)
     try {
       await this.db.exec('ALTER TABLE groups ADD COLUMN is_public INTEGER DEFAULT 1;');
-    } catch {}
+    } catch {
+      // Column already exists, ignore error
+    }
     try {
       await this.db.exec('ALTER TABLE sites ADD COLUMN is_public INTEGER DEFAULT 1;');
-    } catch {}
+    } catch {
+      // Column already exists, ignore error
+    }
     try {
       await this.db.exec('CREATE INDEX IF NOT EXISTS idx_groups_is_public ON groups(is_public);');
       await this.db.exec('CREATE INDEX IF NOT EXISTS idx_sites_is_public ON sites(is_public);');
-    } catch {}
+    } catch {
+      // Indexes already exist, ignore error
+    }
 
     // 首先检查数据库是否已初始化
     try {
