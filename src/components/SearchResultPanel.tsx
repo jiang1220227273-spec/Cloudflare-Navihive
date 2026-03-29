@@ -91,9 +91,7 @@ const SearchResultPanel: React.FC<SearchResultPanelProps> = ({
         border: '1px solid',
         borderColor: 'divider',
         backgroundColor: (theme) =>
-          theme.palette.mode === 'dark'
-            ? 'rgba(8, 26, 38, 0.94)'
-            : 'rgba(255, 255, 255, 0.96)',
+          theme.palette.mode === 'dark' ? 'rgba(8, 26, 38, 0.94)' : 'rgba(255, 255, 255, 0.96)',
         backdropFilter: 'blur(16px)',
         boxShadow: (theme) =>
           theme.palette.mode === 'dark'

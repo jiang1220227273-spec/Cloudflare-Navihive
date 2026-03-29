@@ -233,7 +233,8 @@ export class NavigationAPI {
     if (passwordMode === 'invalid-bcrypt') {
       return {
         success: false,
-        message: 'AUTH_PASSWORD 看起来像 bcrypt 哈希，但格式无效。请重新生成哈希，或直接填写明文密码。',
+        message:
+          'AUTH_PASSWORD 看起来像 bcrypt 哈希，但格式无效。请重新生成哈希，或直接填写明文密码。',
       };
     }
 

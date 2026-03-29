@@ -3,6 +3,7 @@ import { NavigationClient } from './API/client';
 import { MockNavigationClient } from './API/mock';
 import { Site, Group } from './API/http';
 import { GroupWithSites } from './types';
+import { useTheme } from './contexts/ThemeContext';
 import ThemeToggle from './components/ThemeToggle';
 import GroupCard from './components/GroupCard';
 import SiteCard from './components/SiteCard';
@@ -39,8 +40,6 @@ import {
   Alert,
   Stack,
   Paper,
-  createTheme,
-  ThemeProvider,
   CssBaseline,
   TextField,
   Dialog,
@@ -130,101 +129,8 @@ const DEFAULT_CONFIGS = {
 };
 
 function App() {
-  // 主题模式状态
-  const [darkMode, setDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-      return savedTheme === 'dark';
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
-  });
-
-  // 创建Material UI主题
-  const theme = useMemo(
-    () =>
-      createTheme({
-        palette: {
-          mode: darkMode ? 'dark' : 'light',
-          primary: {
-            main: darkMode ? '#5eead4' : '#0f766e',
-            light: darkMode ? '#99f6e4' : '#5eead4',
-            dark: darkMode ? '#0f766e' : '#115e59',
-          },
-          secondary: {
-            main: darkMode ? '#fb923c' : '#ea580c',
-            light: darkMode ? '#fdba74' : '#fb923c',
-            dark: darkMode ? '#c2410c' : '#9a3412',
-          },
-          background: {
-            default: darkMode ? '#07131d' : '#edf7f5',
-            paper: darkMode ? 'rgba(10, 23, 33, 0.82)' : 'rgba(255, 255, 255, 0.82)',
-          },
-          text: {
-            primary: darkMode ? '#f4fbfa' : '#0f172a',
-            secondary: darkMode ? '#a7c4cc' : '#4b5563',
-          },
-        },
-        shape: {
-          borderRadius: 18,
-        },
-        typography: {
-          fontFamily: 'Roboto, "Segoe UI Variable", "PingFang SC", sans-serif',
-          h2: {
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-          },
-          h3: {
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-          },
-          h4: {
-            fontWeight: 700,
-            letterSpacing: '-0.02em',
-          },
-        },
-        components: {
-          MuiCssBaseline: {
-            styleOverrides: {
-              body: {
-                minHeight: '100vh',
-              },
-            },
-          },
-          MuiButton: {
-            styleOverrides: {
-              root: {
-                borderRadius: 999,
-                textTransform: 'none',
-                fontWeight: 700,
-                boxShadow: 'none',
-              },
-            },
-          },
-          MuiPaper: {
-            styleOverrides: {
-              root: {
-                backdropFilter: 'blur(14px)',
-              },
-            },
-          },
-          MuiChip: {
-            styleOverrides: {
-              root: {
-                borderRadius: 999,
-                fontWeight: 600,
-              },
-            },
-          },
-        },
-      }),
-    [darkMode]
-  );
-
-  // 切换主题的回调函数
-  const toggleTheme = () => {
-    setDarkMode(!darkMode);
-    localStorage.setItem('theme', !darkMode ? 'dark' : 'light');
-  };
+  // Use theme from context
+  const { theme } = useTheme();
 
   const [groups, setGroups] = useState<GroupWithSites[]>([]);
   const [loading, setLoading] = useState(true);
@@ -493,15 +399,6 @@ function App() {
       }
     };
   }, [configs]);
-
-  // 同步HTML的class以保持与现有CSS兼容
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
 
   // 处理错误的函数
   const handleError = (errorMessage: string) => {
@@ -1047,36 +944,28 @@ function App() {
   // 如果正在检查认证状态，显示加载界面
   if (isAuthChecking) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
-          className='navihive-shell'
-          sx={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            bgcolor: 'background.default',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          <Box className='navihive-shell__orb navihive-shell__orb--one' />
-          <Box className='navihive-shell__orb navihive-shell__orb--two' />
-          <CircularProgress size={60} thickness={4} />
-        </Box>
-      </ThemeProvider>
+      <Box
+        className='navihive-shell'
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.default',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        <Box className='navihive-shell__orb navihive-shell__orb--one' />
+        <Box className='navihive-shell__orb navihive-shell__orb--two' />
+        <CircularProgress size={60} thickness={4} />
+      </Box>
     );
   }
 
   // 如果需要认证但未认证，显示登录界面
   if (isAuthRequired && !isAuthenticated) {
-    return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {renderLoginForm()}
-      </ThemeProvider>
-    );
+    return renderLoginForm();
   }
 
   // 更新分组
@@ -1234,7 +1123,7 @@ function App() {
   );
 
   return (
-    <ThemeProvider theme={theme}>
+    <>
       <CssBaseline />
 
       {/* 错误提示 Snackbar */}
@@ -1431,7 +1320,11 @@ function App() {
                       </Button>
                     </>
                   ) : viewMode === 'readonly' ? (
-                    <Button variant='contained' color='primary' onClick={() => setIsAuthRequired(true)}>
+                    <Button
+                      variant='contained'
+                      color='primary'
+                      onClick={() => setIsAuthRequired(true)}
+                    >
                       管理员登录
                     </Button>
                   ) : (
@@ -1466,7 +1359,10 @@ function App() {
                           'aria-labelledby': 'navigation-button',
                         }}
                       >
-                        <MenuItem onClick={canSortContent ? startGroupSort : undefined} disabled={!canSortContent}>
+                        <MenuItem
+                          onClick={canSortContent ? startGroupSort : undefined}
+                          disabled={!canSortContent}
+                        >
                           <ListItemIcon>
                             <SortIcon fontSize='small' />
                           </ListItemIcon>
@@ -1508,14 +1404,17 @@ function App() {
                     </>
                   )}
 
-                  <ThemeToggle darkMode={darkMode} onToggle={toggleTheme} />
+                  <ThemeToggle />
                 </Stack>
               </Box>
 
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: 'repeat(2, minmax(0, 1fr))',
+                    lg: 'repeat(4, minmax(0, 1fr))',
+                  },
                   gap: 1.5,
                 }}
               >
@@ -1616,11 +1515,7 @@ function App() {
                   />
                 </Stack>
 
-                <Stack
-                  direction='row'
-                  flexWrap='wrap'
-                  sx={{ gap: 1, ml: { xl: 'auto' } }}
-                >
+                <Stack direction='row' flexWrap='wrap' sx={{ gap: 1, ml: { xl: 'auto' } }}>
                   {groups.slice(0, 6).map((group) => (
                     <Chip
                       key={`jump-${group.id}`}
@@ -2247,9 +2142,13 @@ function App() {
                     已选择: {importFile.name}
                   </Typography>
                 )}
-                <Typography variant='caption' color='text.secondary' sx={{ display: 'block', mt: 1 }}>
-                  Chrome 可在“书签管理器 &gt; 导出书签”得到 HTML 文件；也支持本地 Bookmarks
-                  JSON 文件。
+                <Typography
+                  variant='caption'
+                  color='text.secondary'
+                  sx={{ display: 'block', mt: 1 }}
+                >
+                  Chrome 可在“书签管理器 &gt; 导出书签”得到 HTML 文件；也支持本地 Bookmarks JSON
+                  文件。
                 </Typography>
               </Box>
               {importError && (
@@ -2310,7 +2209,7 @@ function App() {
           </Box>
         </Container>
       </Box>
-    </ThemeProvider>
+    </>
   );
 }
 

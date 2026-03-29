@@ -31,8 +31,7 @@ dist-ssr
 # wrangler files
 .wrangler
 .dev.vars*
-pnpm-lock.yaml
-npm-lock.yaml
+package-lock.json
 wrangler.jsonc
 开发调试.md
 UPDATE.md

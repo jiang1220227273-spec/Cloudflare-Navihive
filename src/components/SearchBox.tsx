@@ -251,9 +251,7 @@ const SearchBox: React.FC<SearchBoxProps> = ({ groups, sites, onInternalResultCl
             border: '1px solid',
             borderColor: 'divider',
             backgroundColor: (theme) =>
-              theme.palette.mode === 'dark'
-                ? 'rgba(8, 26, 38, 0.82)'
-                : 'rgba(255, 255, 255, 0.82)',
+              theme.palette.mode === 'dark' ? 'rgba(8, 26, 38, 0.82)' : 'rgba(255, 255, 255, 0.82)',
             backdropFilter: 'blur(16px)',
             boxShadow: (theme) =>
               theme.palette.mode === 'dark'
